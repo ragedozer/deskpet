@@ -17,9 +17,40 @@ class ReminderWindow(QMainWindow):
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.Window)
         self.setWindowTitle("Reminder")
         
+        # Style for the reminder window
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f0f0f0;
+                border: 2px solid #c0c0c0;
+                border-radius: 10px;
+            }
+            QLabel {
+                color: #2c3e50;
+                font-size: 12px;
+                padding: 10px;
+            }
+            QPushButton {
+                background-color: #3498db;
+                border: none;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 5px;
+                font-size: 12px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #2473a7;
+            }
+        """)
+        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         label = QLabel("Hydration check")
         label.setAlignment(Qt.AlignCenter)
@@ -27,17 +58,86 @@ class ReminderWindow(QMainWindow):
         
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(self.hide)
+        ok_button.setCursor(Qt.PointingHandCursor)  # Change cursor on hover
         layout.addWidget(ok_button)
         
-        self.setFixedSize(200, 100)
+        self.setFixedSize(200, 120)
 
 class SpriteSelector(QDialog):
     def __init__(self):
         super().__init__()
         self.selected_sprite = None
         self.sprite_size = 65
-        # Remove help button from window
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        
+        # Style for the configuration window
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f5f6fa;
+                border-radius: 10px;
+            }
+            QLabel {
+                color: #2c3e50;
+                font-size: 12px;
+            }
+            QPushButton {
+                background-color: #3498db;
+                border: none;
+                color: white;
+                padding: 8px 16px;
+                border-radius: 5px;
+                font-size: 12px;
+                min-width: 80px;
+                margin: 5px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #2473a7;
+            }
+            QPushButton:disabled {
+                background-color: #bdc3c7;
+            }
+            QSlider {
+                margin: 10px;
+            }
+            QSlider::groove:horizontal {
+                border: 1px solid #bdc3c7;
+                height: 8px;
+                background: #e0e0e0;
+                margin: 2px 0;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #3498db;
+                border: none;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
+            }
+            QSlider::handle:horizontal:hover {
+                background: #2980b9;
+            }
+            QCheckBox {
+                color: #2c3e50;
+                font-size: 12px;
+                padding: 5px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 3px;
+            }
+            QCheckBox::indicator:unchecked {
+                border: 2px solid #bdc3c7;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #3498db;
+                border: 2px solid #3498db;
+            }
+        """)
+        
         self.initUI()
         
     def initUI(self):
