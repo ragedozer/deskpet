@@ -17,35 +17,41 @@ if sys.platform == 'win32':
 class ReminderWindow(QMainWindow):
     def __init__(self, reminder_type="Hydration"):
         super().__init__()
-        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.Window)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.Window | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowTitle("Reminder")
         
         # Style for the reminder window
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #f0f0f0;
-                border: 2px solid #c0c0c0;
-                border-radius: 10px;
+                background-color: transparent;
+            }
+            QWidget {
+                border-radius: 15px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                background-color: rgba(255, 255, 255, 0.92);
             }
             QLabel {
                 color: #2c3e50;
                 font-size: 12px;
                 padding: 10px;
+                border: none;
+                background-color: transparent;
             }
             QPushButton {
-                background-color: #3498db;
+                background-color: #FA8E24;
                 border: none;
-                color: white;
+                color: black;
                 padding: 8px 16px;
                 border-radius: 5px;
                 font-size: 12px;
                 min-width: 80px;
             }
             QPushButton:hover {
-                background-color: #2980b9;
+                background-color: #DD7714;
             }
             QPushButton:pressed {
-                background-color: #2473a7;
+                background-color: #DD7714;
             }
         """)
         
@@ -55,13 +61,13 @@ class ReminderWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        label = QLabel(f"{reminder_type} check")
+        label = QLabel(f"{reminder_type} check!")
         label.setAlignment(Qt.AlignCenter)
         layout.addWidget(label)
         
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(self.hide)
-        ok_button.setCursor(Qt.PointingHandCursor)  # Change cursor on hover
+        ok_button.setCursor(Qt.PointingHandCursor)
         layout.addWidget(ok_button)
         
         self.setFixedSize(200, 120)
@@ -151,8 +157,8 @@ class SpriteSelector(QDialog):
         super().__init__()
         self.selected_sprite = None
         self.pet = None  # Store reference to the pet
-        # Calculate fixed sprite size (what size 75 would have been)
-        self.sprite_size = int(65 + (75 - 1) * (65/99))  # ~98 pixels
+        # Update sprite size to match preview size
+        self.sprite_size = 96  # Fixed size to match preview
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setAttribute(Qt.WA_TranslucentBackground)
         
@@ -410,7 +416,7 @@ class SpriteSelector(QDialog):
 
         # Hydration timer slider
         timer_layout = QHBoxLayout()
-        timer_layout.setSpacing(12)  # Consistent spacing between all elements
+        timer_layout.setSpacing(4)  # Match the spacing from hydration toggle layout
         timer_layout.setContentsMargins(0, 0, 0, 0)  # Remove all padding
         timer_label = QLabel("Reminder interval:")
         timer_label.setStyleSheet("border: none;")
@@ -422,6 +428,7 @@ class SpriteSelector(QDialog):
         self.timer_display = QLabel("20 minutes")
         self.timer_display.setStyleSheet("border: none;")
         self.timer_display.setMinimumWidth(80)
+        self.timer_slider.valueChanged.connect(self.update_timer_display)
         
         timer_layout.addWidget(timer_label)
         timer_layout.addWidget(self.timer_slider)
@@ -468,8 +475,9 @@ class SpriteSelector(QDialog):
         posture_layout.addStretch()
         posture_container_layout.addLayout(posture_layout)
 
+        # Posture timer slider
         posture_timer_layout = QHBoxLayout()
-        posture_timer_layout.setSpacing(12)  # Consistent spacing between all elements
+        posture_timer_layout.setSpacing(4)  # Match the spacing from posture toggle layout
         posture_timer_layout.setContentsMargins(0, 0, 0, 0)  # Remove all padding
         posture_timer_label = QLabel("Reminder interval:")
         posture_timer_label.setStyleSheet("border: none;")
@@ -481,6 +489,7 @@ class SpriteSelector(QDialog):
         self.posture_timer_display = QLabel("20 minutes")
         self.posture_timer_display.setStyleSheet("border: none;")
         self.posture_timer_display.setMinimumWidth(80)
+        self.posture_timer_slider.valueChanged.connect(self.update_posture_timer_display)
         
         posture_timer_layout.addWidget(posture_timer_label)
         posture_timer_layout.addWidget(self.posture_timer_slider)
@@ -561,12 +570,12 @@ class SpriteSelector(QDialog):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Create a stronger blur effect
+        # Create a blur effect
         blur = QGraphicsBlurEffect()
-        blur.setBlurRadius(20)  # Increased from 10 to 20
+        blur.setBlurRadius(20)
         
-        # Make the background more transparent to enhance blur visibility
-        painter.setBrush(QColor(255, 255, 255, 140))  # Reduced opacity from 178 to 140
+        # Make the background slightly transparent
+        painter.setBrush(QColor(255, 255, 255, 140))
         painter.setPen(Qt.NoPen)
         
         # Draw the main background
@@ -574,9 +583,9 @@ class SpriteSelector(QDialog):
         
         # Enhanced gradient effect
         gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(255, 255, 255, 140))  # Matching opacity
-        gradient.setColorAt(0.5, QColor(255, 255, 255, 120))  # Added middle point
-        gradient.setColorAt(1, QColor(255, 255, 255, 100))  # More transparent at bottom
+        gradient.setColorAt(0, QColor(255, 255, 255, 140))
+        gradient.setColorAt(0.5, QColor(255, 255, 255, 120))
+        gradient.setColorAt(1, QColor(255, 255, 255, 100))
         painter.setBrush(gradient)
         painter.drawRoundedRect(self.rect(), 20, 20)
 
@@ -642,8 +651,8 @@ class SpriteSelector(QDialog):
         if self.pet is None:
             # Create and show the pet
             self.pet = DesktopPet(
-                self.sprite_size,
-                150,  # travel range
+                96,  # Fixed size to match preview
+                850,  # travel range increased to 850px
                 self.hydration_checkbox.isChecked(),
                 self.timer_slider.value(),
                 self.posture_checkbox.isChecked(),
