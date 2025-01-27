@@ -15,7 +15,7 @@ if sys.platform == 'win32':
     ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
 
 class ReminderWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, reminder_type="Hydration"):
         super().__init__()
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.Window)
         self.setWindowTitle("Reminder")
@@ -55,7 +55,7 @@ class ReminderWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
         
-        label = QLabel("Hydration check")
+        label = QLabel(f"{reminder_type} check")
         label.setAlignment(Qt.AlignCenter)
         layout.addWidget(label)
         
@@ -81,7 +81,7 @@ class ToggleSwitch(QCheckBox):
         
         # Draw the background
         if self.isChecked():
-            painter.setBrush(QColor("#34C759"))  # iOS green
+            painter.setBrush(QColor("#FA8E24"))  # Changed from #34C759 to #FA8E24
         else:
             painter.setBrush(QColor("#E9E9EA"))  # Light gray
             
@@ -226,14 +226,14 @@ class SpriteSelector(QDialog):
                 border-radius: 4px;
             }
             QSlider::handle:horizontal {
-                background: #3498db;
+                background: #FA8E24;  /* Changed from #3498db to #FA8E24 */
                 border: none;
                 width: 18px;
                 margin: -5px 0;
                 border-radius: 9px;
             }
             QSlider::handle:horizontal:hover {
-                background: #2980b9;
+                background: #DD7714;  /* Darker version of #FA8E24 for hover state */
             }
             QCheckBox {
                 color: #2c3e50;
@@ -254,15 +254,17 @@ class SpriteSelector(QDialog):
             }
             
             #startButton {
-                background-color: #FA8E24;  /* Resting state color */
+                background-color: #FA8E24;
                 border: none;
-                color: black;  /* Changed to black text */
-                padding: 12px 24px;  /* Added horizontal padding */
-                border-radius: 16px;  /* Half of height (32px) for pill shape */
+                color: black;
+                padding: 0px;
+                border-radius: 16px;
                 font-size: 14px;
-                min-width: 200px;
-                height: 32px;  /* Fixed height */
-                max-height: 32px;  /* Added to force height */
+                min-width: 360px;
+                width: 360px;
+                max-width: 360px;
+                height: 64px;          /* Doubled from 32px */
+                max-height: 64px;      /* Doubled from 32px */
             }
             
             #startButton:hover {
@@ -297,20 +299,26 @@ class SpriteSelector(QDialog):
         title_bar = QWidget()
         title_bar.setObjectName("titleBar")
         title_bar_layout = QHBoxLayout(title_bar)
-        title_bar_layout.setContentsMargins(20, 20, 20, 20)  # Increased padding around logo
+        title_bar_layout.setContentsMargins(20, 20, 20, 20)
         
-        # Add logo
+        # Add logo with left alignment matching containers
         logo_label = QLabel()
         try:
             logo_pixmap = QPixmap("logo.png")
             if not logo_pixmap.isNull():
-                scaled_logo = logo_pixmap.scaled(96, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Reduced from 120x40 to 96x32
+                scaled_logo = logo_pixmap.scaled(96, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 logo_label.setPixmap(scaled_logo)
-                logo_label.setFixedSize(96, 32)  # Reduced from 120x40 to 96x32
+                logo_label.setFixedSize(96, 32)
         except:
             print("Logo file not found or invalid")
         
-        # Add window controls with reduced spacing
+        # Create a container to align logo with settings containers
+        logo_container = QHBoxLayout()
+        logo_container.setContentsMargins(0, 0, 0, 0)
+        logo_container.addWidget(logo_label)
+        logo_container.addStretch()
+        
+        # Add window controls
         minimize_btn = QPushButton("−")
         minimize_btn.setObjectName("minimizeButton")
         minimize_btn.clicked.connect(self.showMinimized)
@@ -319,17 +327,16 @@ class SpriteSelector(QDialog):
         close_btn.setObjectName("closeButton")
         close_btn.clicked.connect(self.close)
         
-        title_bar_layout.addWidget(logo_label)
-        title_bar_layout.addStretch()
-        title_bar_layout.setSpacing(4)  # Added reduced spacing between buttons
+        title_bar_layout.addLayout(logo_container)
         title_bar_layout.addWidget(minimize_btn)
         title_bar_layout.addWidget(close_btn)
         
         main_layout.addWidget(title_bar)
         
-        # Content layout with consistent margins
+        # Content layout with consistent margins and centering
         content_layout = QVBoxLayout()
-        content_layout.setContentsMargins(20, 10, 20, 20)
+        content_layout.setContentsMargins(20, 2, 20, 20)  # Reduced top margin by 8px
+        content_layout.setAlignment(Qt.AlignCenter)
         
         # Container for centered preview
         preview_container = QHBoxLayout()
@@ -364,50 +371,134 @@ class SpriteSelector(QDialog):
         # Add some space
         content_layout.addSpacing(10)
         
-        # Hydration timer
+        # Container for hydration settings
+        hydration_container = QWidget()
+        hydration_container.setFixedWidth(360)
+        hydration_container.setStyleSheet("""
+            QWidget {
+                border: 0.5px solid rgba(0, 0, 0, 0.65);
+                border-radius: 16px;
+                padding: 6px;
+            }
+            QLabel {
+                border: none;
+            }
+            QSlider {
+                border: none;
+            }
+        """)
+        hydration_container_layout = QVBoxLayout(hydration_container)
+        hydration_container_layout.setContentsMargins(6, 12, 6, 0)  # Removed bottom padding
+        hydration_container_layout.setSpacing(2)  # Minimal spacing between toggle and interval
+
+        # Add all the hydration settings as before
         hydration_layout = QHBoxLayout()
+        hydration_layout.setSpacing(4)
         hydration_label = QLabel("Hydration reminder")
         hydration_label.setStyleSheet("""
             QLabel {
                 color: #2c3e50;
                 font-size: 12px;
+                border: none;
             }
         """)
         self.hydration_checkbox = ToggleSwitch()
         hydration_layout.addWidget(hydration_label)
-        hydration_layout.addSpacing(10)  # Reduced from 20px to 10px to match slider spacing
         hydration_layout.addWidget(self.hydration_checkbox)
         hydration_layout.addStretch()
-        content_layout.addLayout(hydration_layout)
-        
-        # Hydration timer
+        hydration_container_layout.addLayout(hydration_layout)
+
+        # Hydration timer slider
         timer_layout = QHBoxLayout()
-        timer_label = QLabel("Reminder Interval:")
+        timer_layout.setSpacing(12)  # Consistent spacing between all elements
+        timer_layout.setContentsMargins(0, 0, 0, 0)  # Remove all padding
+        timer_label = QLabel("Reminder interval:")
+        timer_label.setStyleSheet("border: none;")
         self.timer_slider = QSlider(Qt.Horizontal)
         self.timer_slider.setMinimum(5)
         self.timer_slider.setMaximum(3600)
-        self.timer_slider.setValue(1200)  # Changed from 300 (5 minutes) to 1200 (20 minutes)
-        self.timer_display = QLabel("20 minutes")  # Updated initial display text
+        self.timer_slider.setValue(1200)
+        self.timer_slider.setFixedWidth(160)  # Slightly reduced width
+        self.timer_display = QLabel("20 minutes")
+        self.timer_display.setStyleSheet("border: none;")
         self.timer_display.setMinimumWidth(80)
-        
-        self.timer_slider.valueChanged.connect(self.update_timer_display)
         
         timer_layout.addWidget(timer_label)
         timer_layout.addWidget(self.timer_slider)
         timer_layout.addWidget(self.timer_display)
-        content_layout.addLayout(timer_layout)
+        hydration_container_layout.addLayout(timer_layout)
+
+        content_layout.addWidget(hydration_container, 0, Qt.AlignCenter)
+        content_layout.addSpacing(12)  # Reduced spacing between containers
+
+        # Container for posture settings
+        posture_container = QWidget()
+        posture_container.setFixedWidth(360)
+        posture_container.setStyleSheet("""
+            QWidget {
+                border: 0.5px solid rgba(0, 0, 0, 0.65);
+                border-radius: 16px;
+                padding: 6px;
+            }
+            QLabel {
+                border: none;
+            }
+            QSlider {
+                border: none;
+            }
+        """)
+        posture_container_layout = QVBoxLayout(posture_container)
+        posture_container_layout.setContentsMargins(6, 12, 6, 0)  # Removed bottom padding
+        posture_container_layout.setSpacing(2)  # Minimal spacing between toggle and interval
+
+        # Add all the posture settings as before
+        posture_layout = QHBoxLayout()
+        posture_layout.setSpacing(4)
+        posture_label = QLabel("Posture check")
+        posture_label.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-size: 12px;
+                border: none;
+            }
+        """)
+        self.posture_checkbox = ToggleSwitch()
+        posture_layout.addWidget(posture_label)
+        posture_layout.addWidget(self.posture_checkbox)
+        posture_layout.addStretch()
+        posture_container_layout.addLayout(posture_layout)
+
+        posture_timer_layout = QHBoxLayout()
+        posture_timer_layout.setSpacing(12)  # Consistent spacing between all elements
+        posture_timer_layout.setContentsMargins(0, 0, 0, 0)  # Remove all padding
+        posture_timer_label = QLabel("Reminder interval:")
+        posture_timer_label.setStyleSheet("border: none;")
+        self.posture_timer_slider = QSlider(Qt.Horizontal)
+        self.posture_timer_slider.setMinimum(5)
+        self.posture_timer_slider.setMaximum(3600)
+        self.posture_timer_slider.setValue(1200)
+        self.posture_timer_slider.setFixedWidth(160)  # Slightly reduced width
+        self.posture_timer_display = QLabel("20 minutes")
+        self.posture_timer_display.setStyleSheet("border: none;")
+        self.posture_timer_display.setMinimumWidth(80)
         
-        # Add some space before the start button
-        content_layout.addSpacing(10)
-        
-        # Start button in container
+        posture_timer_layout.addWidget(posture_timer_label)
+        posture_timer_layout.addWidget(self.posture_timer_slider)
+        posture_timer_layout.addWidget(self.posture_timer_display)
+        posture_container_layout.addLayout(posture_timer_layout)
+
+        content_layout.addWidget(posture_container, 0, Qt.AlignCenter)
+        content_layout.addSpacing(20)
+
+        # Center the start button
         start_container = QHBoxLayout()
-        start_container.setContentsMargins(0, 0, 0, 0)  # Remove container margins
+        start_container.setContentsMargins(0, 0, 0, 0)
+        start_container.setSpacing(0)
         self.start_btn = QPushButton('Start deskpet')
         self.start_btn.setObjectName("startButton")
         self.start_btn.setEnabled(False)
         self.start_btn.clicked.connect(self.toggle_pet)
-        self.start_btn.setFixedSize(360, 32)  # Increased width to match bottom padding
+        self.start_btn.setFixedSize(360, 64)  # Updated height to 64px
         start_container.addWidget(self.start_btn)
         content_layout.addLayout(start_container)
         
@@ -554,7 +645,9 @@ class SpriteSelector(QDialog):
                 self.sprite_size,
                 150,  # travel range
                 self.hydration_checkbox.isChecked(),
-                self.timer_slider.value()
+                self.timer_slider.value(),
+                self.posture_checkbox.isChecked(),
+                self.posture_timer_slider.value()
             )
             self.start_btn.setText("Stop deskpet")
         else:
@@ -563,15 +656,29 @@ class SpriteSelector(QDialog):
             self.pet = None
             self.start_btn.setText("Start deskpet")
 
+    def update_posture_timer_display(self, value):
+        if value < 60:
+            self.posture_timer_display.setText(f"{value} seconds")
+        else:
+            minutes = value // 60
+            seconds = value % 60
+            if seconds == 0:
+                self.posture_timer_display.setText(f"{minutes} minutes")
+            else:
+                self.posture_timer_display.setText(f"{minutes} min {seconds} sec")
+
 class DesktopPet(QMainWindow):
-    def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300):
+    def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300, posture_enabled=False, posture_interval=300):
         super().__init__()
         self.sprite_size = sprite_size
         self.max_travel = max_travel
         self.hydration_enabled = hydration_enabled
         self.hydration_interval = hydration_interval
+        self.posture_enabled = posture_enabled
+        self.posture_interval = posture_interval
         self.start_x = None
         self.reminder_window = ReminderWindow()
+        self.posture_reminder_window = ReminderWindow("Posture")
         
         # Load animations
         self.animation = SpriteAnimation('goose.png', 'goose.json')
@@ -613,6 +720,11 @@ class DesktopPet(QMainWindow):
             self.hydration_timer.timeout.connect(self.hydration_check)
             self.hydration_timer.start(self.hydration_interval * 1000)
         
+        if self.posture_enabled:
+            self.posture_timer = QTimer(self)
+            self.posture_timer.timeout.connect(self.posture_check)
+            self.posture_timer.start(self.posture_interval * 1000)
+        
         self.setGeometry(self.x, self.y, self.sprite_size, self.sprite_size)
         self.show()
         
@@ -623,6 +735,11 @@ class DesktopPet(QMainWindow):
         self.reminder_window.show()
         self.reminder_window.raise_()
         self.reminder_window.activateWindow()
+    
+    def posture_check(self):
+        self.posture_reminder_window.show()
+        self.posture_reminder_window.raise_()
+        self.posture_reminder_window.activateWindow()
     
     def update_animation(self):
         if self.current_frame is None or self.frame_time <= 0:
