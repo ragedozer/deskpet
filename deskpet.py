@@ -66,6 +66,35 @@ class ReminderWindow(QMainWindow):
         
         self.setFixedSize(200, 120)
 
+class ToggleSwitch(QCheckBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(44, 24)
+        self.setCursor(Qt.PointingHandCursor)  # Add hand cursor on hover
+        
+    def hitButton(self, pos):
+        return self.contentsRect().contains(pos)  # Make entire widget clickable
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw the background
+        if self.isChecked():
+            painter.setBrush(QColor("#34C759"))  # iOS green
+        else:
+            painter.setBrush(QColor("#E9E9EA"))  # Light gray
+            
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(0, 0, self.width(), self.height(), 12, 12)
+        
+        # Draw the handle (white circle)
+        painter.setBrush(QColor("white"))
+        if self.isChecked():
+            painter.drawEllipse(22, 2, 20, 20)  # Right position
+        else:
+            painter.drawEllipse(2, 2, 20, 20)   # Left position
+
 class SpriteAnimation:
     def __init__(self, sprite_sheet, animation_data):
         self.sprite_sheet = QPixmap(sprite_sheet)
@@ -85,6 +114,11 @@ class SpriteAnimation:
         for frame_name, frame_data in self.data['frames'].items():
             frame_rect = frame_data['frame']
             duration = frame_data['duration']
+            
+            # Slow down idle animations by multiplying duration
+            if 'idle-' in frame_name.lower():
+                duration *= 3  # Makes idle animations 3x slower
+                
             x, y = frame_rect['x'], frame_rect['y']
             w, h = frame_rect['w'], frame_rect['h']
             
@@ -116,8 +150,8 @@ class SpriteSelector(QDialog):
     def __init__(self):
         super().__init__()
         self.selected_sprite = None
-        # Calculate fixed sprite size (what size 100 would have been)
-        self.sprite_size = int(65 + (100 - 1) * (65/99))  # ~130 pixels
+        # Calculate fixed sprite size (what size 75 would have been)
+        self.sprite_size = int(65 + (75 - 1) * (65/99))  # ~98 pixels
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setAttribute(Qt.WA_TranslucentBackground)
         
@@ -219,21 +253,19 @@ class SpriteSelector(QDialog):
             }
             
             #startButton {
-                background-color: #EDEDED;
+                background-color: #FA8E24;  /* Resting state color */
                 border: none;
-                color: black;
-                padding: 12px;
-                border-radius: 25px;
+                color: black;  /* Changed to black text */
+                padding: 12px 24px;  /* Added horizontal padding */
+                border-radius: 16px;  /* Half of height (32px) for pill shape */
                 font-size: 14px;
                 min-width: 200px;
+                height: 32px;  /* Fixed height */
+                max-height: 32px;  /* Added to force height */
             }
             
-            #startButton:enabled {
-                background-color: #96D7FF;
-            }
-            
-            #startButton:enabled:hover {
-                background-color: #5FB1E4;
+            #startButton:hover {
+                background-color: #DD7714;
             }
             
             #startButton:disabled {
@@ -241,6 +273,16 @@ class SpriteSelector(QDialog):
                 color: #808080;
             }
         """)
+        
+        # Add animation properties
+        self.animation = SpriteAnimation('goose.png', 'goose.json')
+        self.current_frame = None
+        self.frame_time = 0
+        
+        # Add animation timer
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(self.update_preview_animation)
+        self.animation_timer.start(16)  # ~60 FPS
         
         self.initUI()
         
@@ -293,17 +335,20 @@ class SpriteSelector(QDialog):
         
         # Preview section
         self.preview = QLabel()
-        self.preview.setFixedSize(128, 128)
+        self.preview.setFixedSize(96, 96)
         self.preview.setAlignment(Qt.AlignCenter)
         self.preview.setStyleSheet("""
             QLabel {
-                border: 2px dashed gray;
-                background-color: rgba(255, 255, 255, 150);
+                background-color: transparent;
+                border: none;
             }
         """)
         preview_container.addWidget(self.preview)
         preview_container.addStretch()
         content_layout.addLayout(preview_container)
+        
+        # Add some space after the preview
+        content_layout.addSpacing(20)  # Match the top padding
         
         # Image selection
         select_container = QHBoxLayout()
@@ -318,18 +363,29 @@ class SpriteSelector(QDialog):
         content_layout.addSpacing(10)
         
         # Hydration timer
-        hydration_layout = QVBoxLayout()
-        self.hydration_checkbox = QCheckBox("Enable hydration reminder")
-        self.hydration_checkbox.setChecked(False)
+        hydration_layout = QHBoxLayout()
+        hydration_label = QLabel("Hydration reminder")
+        hydration_label.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-size: 12px;
+            }
+        """)
+        self.hydration_checkbox = ToggleSwitch()
+        hydration_layout.addWidget(hydration_label)
+        hydration_layout.addSpacing(10)  # Reduced from 20px to 10px to match slider spacing
         hydration_layout.addWidget(self.hydration_checkbox)
+        hydration_layout.addStretch()
+        content_layout.addLayout(hydration_layout)
         
+        # Hydration timer
         timer_layout = QHBoxLayout()
         timer_label = QLabel("Reminder Interval:")
         self.timer_slider = QSlider(Qt.Horizontal)
         self.timer_slider.setMinimum(5)
         self.timer_slider.setMaximum(3600)
-        self.timer_slider.setValue(300)
-        self.timer_display = QLabel("5 minutes")
+        self.timer_slider.setValue(1200)  # Changed from 300 (5 minutes) to 1200 (20 minutes)
+        self.timer_display = QLabel("20 minutes")  # Updated initial display text
         self.timer_display.setMinimumWidth(80)
         
         self.timer_slider.valueChanged.connect(self.update_timer_display)
@@ -337,9 +393,7 @@ class SpriteSelector(QDialog):
         timer_layout.addWidget(timer_label)
         timer_layout.addWidget(self.timer_slider)
         timer_layout.addWidget(self.timer_display)
-        hydration_layout.addLayout(timer_layout)
-        
-        content_layout.addLayout(hydration_layout)
+        content_layout.addLayout(timer_layout)
         
         # Add some space before the start button
         content_layout.addSpacing(10)
@@ -351,6 +405,7 @@ class SpriteSelector(QDialog):
         self.start_btn.setObjectName("startButton")
         self.start_btn.setEnabled(False)
         self.start_btn.clicked.connect(self.accept)
+        self.start_btn.setFixedSize(200, 32)  # Reduced height from 40 to 32
         start_container.addWidget(self.start_btn)
         start_container.addStretch()
         content_layout.addLayout(start_container)
@@ -478,6 +533,18 @@ class SpriteSelector(QDialog):
     def showEvent(self, event):
         super().showEvent(event)
         self.enableBlur()
+
+    def update_preview_animation(self):
+        if self.current_frame is None or self.frame_time <= 0:
+            self.current_frame, duration = next(self.animation.frame_cycles['idle-right'])
+            self.frame_time = duration
+            scaled_frame = self.current_frame.scaled(
+                96, 96,  # Preview box size (reduced from 128)
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.preview.setPixmap(scaled_frame)
+        self.frame_time -= 16
 
 class DesktopPet(QMainWindow):
     def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300):
