@@ -150,6 +150,7 @@ class SpriteSelector(QDialog):
     def __init__(self):
         super().__init__()
         self.selected_sprite = None
+        self.pet = None  # Store reference to the pet
         # Calculate fixed sprite size (what size 75 would have been)
         self.sprite_size = int(65 + (75 - 1) * (65/99))  # ~98 pixels
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
@@ -303,13 +304,13 @@ class SpriteSelector(QDialog):
         try:
             logo_pixmap = QPixmap("logo.png")
             if not logo_pixmap.isNull():
-                scaled_logo = logo_pixmap.scaled(120, 40, Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Adjusted for logo with text
+                scaled_logo = logo_pixmap.scaled(96, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)  # Reduced from 120x40 to 96x32
                 logo_label.setPixmap(scaled_logo)
-                logo_label.setFixedSize(120, 40)
+                logo_label.setFixedSize(96, 32)  # Reduced from 120x40 to 96x32
         except:
             print("Logo file not found or invalid")
         
-        # Add window controls
+        # Add window controls with reduced spacing
         minimize_btn = QPushButton("−")
         minimize_btn.setObjectName("minimizeButton")
         minimize_btn.clicked.connect(self.showMinimized)
@@ -320,12 +321,13 @@ class SpriteSelector(QDialog):
         
         title_bar_layout.addWidget(logo_label)
         title_bar_layout.addStretch()
+        title_bar_layout.setSpacing(4)  # Added reduced spacing between buttons
         title_bar_layout.addWidget(minimize_btn)
         title_bar_layout.addWidget(close_btn)
         
         main_layout.addWidget(title_bar)
         
-        # Content layout
+        # Content layout with consistent margins
         content_layout = QVBoxLayout()
         content_layout.setContentsMargins(20, 10, 20, 20)
         
@@ -398,16 +400,15 @@ class SpriteSelector(QDialog):
         # Add some space before the start button
         content_layout.addSpacing(10)
         
-        # Start button in container for centering
+        # Start button in container
         start_container = QHBoxLayout()
-        start_container.addStretch()
+        start_container.setContentsMargins(0, 0, 0, 0)  # Remove container margins
         self.start_btn = QPushButton('Start deskpet')
         self.start_btn.setObjectName("startButton")
         self.start_btn.setEnabled(False)
-        self.start_btn.clicked.connect(self.accept)
-        self.start_btn.setFixedSize(200, 32)  # Reduced height from 40 to 32
+        self.start_btn.clicked.connect(self.toggle_pet)
+        self.start_btn.setFixedSize(360, 32)  # Increased width to match bottom padding
         start_container.addWidget(self.start_btn)
-        start_container.addStretch()
         content_layout.addLayout(start_container)
         
         main_layout.addLayout(content_layout)
@@ -546,6 +547,22 @@ class SpriteSelector(QDialog):
             self.preview.setPixmap(scaled_frame)
         self.frame_time -= 16
 
+    def toggle_pet(self):
+        if self.pet is None:
+            # Create and show the pet
+            self.pet = DesktopPet(
+                self.sprite_size,
+                150,  # travel range
+                self.hydration_checkbox.isChecked(),
+                self.timer_slider.value()
+            )
+            self.start_btn.setText("Stop deskpet")
+        else:
+            # Close the pet
+            self.pet.close()
+            self.pet = None
+            self.start_btn.setText("Start deskpet")
+
 class DesktopPet(QMainWindow):
     def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300):
         super().__init__()
@@ -680,10 +697,10 @@ class DesktopPet(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     
-    # Show settings dialog first
+    # Show settings dialog
     selector = SpriteSelector()
-    selector.selected_sprite = QPixmap("goose.png")  # Pre-load the goose sprite
-    selector.start_btn.setEnabled(True)  # Enable start button by default
+    selector.selected_sprite = QPixmap("goose.png")
+    selector.start_btn.setEnabled(True)
     
     # Find the select button in the content layout and hide it
     for child in selector.findChildren(QPushButton):
@@ -698,22 +715,9 @@ def main():
         Qt.SmoothTransformation
     ))
     
-    if selector.exec_() == QDialog.Accepted:
-        # Get settings from dialog
-        sprite_size = selector.sprite_size
-        hydration_enabled = selector.hydration_checkbox.isChecked()
-        hydration_interval = selector.timer_slider.value()
-        
-        # Create and show the pet with selected settings
-        pet = DesktopPet(
-            sprite_size,
-            150,  # travel range
-            hydration_enabled,
-            hydration_interval
-        )
-        return app.exec_()
-    else:
-        return 0
+    # Show the selector window instead of using exec_()
+    selector.show()
+    return app.exec_()
 
 if __name__ == '__main__':
     sys.exit(main())
