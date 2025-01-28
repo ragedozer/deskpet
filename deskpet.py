@@ -166,7 +166,6 @@ class SpriteSelector(QDialog):
         self.setStyleSheet("""
             QDialog {
                 border-radius: 15px;
-                border: 1px solid rgba(255, 255, 255, 0.3);
                 background-color: rgba(255, 255, 255, 0.92);
             }
             
@@ -570,66 +569,48 @@ class SpriteSelector(QDialog):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Create a blur effect
-        blur = QGraphicsBlurEffect()
-        blur.setBlurRadius(20)
-        
-        # Make the background slightly transparent
-        painter.setBrush(QColor(255, 255, 255, 140))
-        painter.setPen(Qt.NoPen)
-        
-        # Draw the main background
-        painter.drawRoundedRect(self.rect(), 20, 20)
-        
-        # Enhanced gradient effect
-        gradient = QLinearGradient(0, 0, 0, self.height())
-        gradient.setColorAt(0, QColor(255, 255, 255, 140))
-        gradient.setColorAt(0.5, QColor(255, 255, 255, 120))
-        gradient.setColorAt(1, QColor(255, 255, 255, 100))
-        painter.setBrush(gradient)
-        painter.drawRoundedRect(self.rect(), 20, 20)
+        # Simple background with rounded corners
+        painter.setBrush(QColor(255, 255, 255, 140))  # White with 140/255 alpha
+        painter.setPen(Qt.NoPen)  # No border
+        painter.drawRoundedRect(self.rect(), 20, 20)  # 20px corner radius
 
     def enableBlur(self):
         if sys.platform == 'win32':
-            try:
-                from win32gui import DwmEnableBlurBehindWindow
-                from win32api import GetModuleHandle
-                from win32con import WS_EX_LAYERED
-                from win32gui import SetWindowLong, GetWindowLong, GWL_EXSTYLE
-                
-                hwnd = self.winId().__int__()
-                
-                # Enable blur behind window with stronger effect
-                class ACCENTPOLICY(ctypes.Structure):
-                    _fields_ = [
-                        ('AccentState', ctypes.c_uint),
-                        ('AccentFlags', ctypes.c_uint),
-                        ('GradientColor', ctypes.c_uint),
-                        ('AnimationId', ctypes.c_uint)
-                    ]
+            from ctypes.wintypes import DWORD, BOOL, HRGN, HWND
+            
+            class ACCENTPOLICY(ctypes.Structure):
+                _fields_ = [
+                    ('AccentState', DWORD),
+                    ('AccentFlags', DWORD),
+                    ('GradientColor', DWORD),
+                    ('AnimationId', DWORD)
+                ]
 
-                class WINDOWCOMPOSITIONATTRIBDATA(ctypes.Structure):
-                    _fields_ = [
-                        ('Attribute', ctypes.c_int),
-                        ('Data', ctypes.POINTER(ctypes.c_int)),
-                        ('SizeOfData', ctypes.c_size_t)
-                    ]
+            class WINDOWCOMPOSITIONATTRIBDATA(ctypes.Structure):
+                _fields_ = [
+                    ('Attribute', DWORD),
+                    ('Data', ctypes.POINTER(ACCENTPOLICY)),
+                    ('SizeOfData', ctypes.c_size_t)
+                ]
 
-                accent = ACCENTPOLICY()
-                accent.AccentState = 3  # ACCENT_ENABLE_BLURBEHIND
-                accent.AccentFlags = 0  # Set to 0 for maximum blur
-                accent.GradientColor = 0
-                
-                data = WINDOWCOMPOSITIONATTRIBDATA()
-                data.Attribute = 19  # WCA_ACCENT_POLICY
-                data.SizeOfData = ctypes.sizeof(accent)
-                data.Data = ctypes.cast(ctypes.pointer(accent), ctypes.POINTER(ctypes.c_int))
-                
-                SetWindowCompositionAttribute = ctypes.windll.user32.SetWindowCompositionAttribute
-                SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
-                
-            except ImportError:
-                pass
+            user32 = ctypes.windll.user32
+            SetWindowCompositionAttribute = user32.SetWindowCompositionAttribute
+            SetWindowCompositionAttribute.restype = BOOL
+            SetWindowCompositionAttribute.argtypes = [HWND, WINDOWCOMPOSITIONATTRIBDATA]
+
+            accent = ACCENTPOLICY()
+            accent.AccentState = 3  # ACCENT_ENABLE_BLURBEHIND
+            accent.AccentFlags = 0
+            accent.GradientColor = 0
+            accent.AnimationId = 0
+
+            data = WINDOWCOMPOSITIONATTRIBDATA()
+            data.Attribute = 19  # WCA_ACCENT_POLICY
+            data.SizeOfData = ctypes.sizeof(accent)
+            data.Data = ctypes.pointer(accent)
+
+            hwnd = int(self.winId())
+            SetWindowCompositionAttribute(hwnd, data)
 
     def showEvent(self, event):
         super().showEvent(event)
