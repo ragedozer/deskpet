@@ -738,15 +738,18 @@ class DesktopPet(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     
-    # Set application icon
-    app.setWindowIcon(QIcon('icon.ico'))
+    app_icon = QIcon('icon.ico')
+    app.setWindowIcon(app_icon)
+    
+    if sys.platform == 'win32':
+        import ctypes
+        myappid = u'mycompany.deskpet.version1'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
     selector = SpriteSelector()
     selector.selected_sprite = QPixmap("goose.png")
     selector.start_btn.setEnabled(True)
     
-    # Since sprite selection is hardcoded, we can remove this loop
-    # and just hide the button directly if needed
     for child in selector.findChildren(QPushButton):
         if child.text() == 'Select Sprite Image':
             child.setVisible(False)
