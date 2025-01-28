@@ -2,10 +2,9 @@ import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QFileDialog, 
                            QPushButton, QVBoxLayout, QHBoxLayout, QWidget, 
-                           QMessageBox, QDialog, QSlider, QCheckBox, QMenu, 
-                           QGraphicsBlurEffect, QGraphicsScene, QGraphicsView)
+                           QMessageBox, QDialog, QSlider, QCheckBox, QMenu)
 from PyQt5.QtCore import Qt, QTimer, QThread, QObject, pyqtSignal, QRectF
-from PyQt5.QtGui import QPixmap, QTransform, QPainter, QColor, QLinearGradient
+from PyQt5.QtGui import QPixmap, QTransform, QPainter, QColor, QLinearGradient, QRegion, QPainterPath, QIcon
 import ctypes
 import json
 from itertools import cycle
@@ -155,12 +154,13 @@ class SpriteAnimation:
 class SpriteSelector(QDialog):
     def __init__(self):
         super().__init__()
-        self.selected_sprite = None
-        self.pet = None  # Store reference to the pet
-        # Update sprite size to match preview size
-        self.sprite_size = 96  # Fixed size to match preview
+        self.pet = None
+        self.sprite_size = 96
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setAttribute(Qt.WA_TranslucentBackground)
+        
+        # Add window icon
+        self.setWindowIcon(QIcon('icon.ico'))
         
         # Updated style for frosted glass effect
         self.setStyleSheet("""
@@ -324,6 +324,8 @@ class SpriteSelector(QDialog):
         logo_container.addStretch()
         
         # Add window controls
+        title_bar_layout.addLayout(logo_container)
+        title_bar_layout.addStretch()
         minimize_btn = QPushButton("−")
         minimize_btn.setObjectName("minimizeButton")
         minimize_btn.clicked.connect(self.showMinimized)
@@ -332,7 +334,7 @@ class SpriteSelector(QDialog):
         close_btn.setObjectName("closeButton")
         close_btn.clicked.connect(self.close)
         
-        title_bar_layout.addLayout(logo_container)
+        title_bar_layout.setSpacing(0)  # Set the spacing to 0 between all items in the layout
         title_bar_layout.addWidget(minimize_btn)
         title_bar_layout.addWidget(close_btn)
         
@@ -363,18 +365,6 @@ class SpriteSelector(QDialog):
         
         # Add some space after the preview
         content_layout.addSpacing(20)  # Match the top padding
-        
-        # Image selection
-        select_container = QHBoxLayout()
-        select_container.addStretch()
-        select_btn = QPushButton('Select Sprite Image')
-        select_btn.clicked.connect(self.select_sprite)
-        select_container.addWidget(select_btn)
-        select_container.addStretch()
-        content_layout.addLayout(select_container)
-        
-        # Add some space
-        content_layout.addSpacing(10)
         
         # Container for hydration settings
         hydration_container = QWidget()
@@ -415,18 +405,18 @@ class SpriteSelector(QDialog):
 
         # Hydration timer slider
         timer_layout = QHBoxLayout()
-        timer_layout.setSpacing(4)  # Match the spacing from hydration toggle layout
-        timer_layout.setContentsMargins(0, 0, 0, 0)  # Remove all padding
+        timer_layout.setSpacing(4)
+        timer_layout.setContentsMargins(0, 0, 0, 0)
         timer_label = QLabel("Reminder interval:")
         timer_label.setStyleSheet("border: none;")
         self.timer_slider = QSlider(Qt.Horizontal)
-        self.timer_slider.setMinimum(5)
+        self.timer_slider.setFixedWidth(150)  # Set fixed width for slider
+        self.timer_slider.setMinimum(300)
         self.timer_slider.setMaximum(3600)
         self.timer_slider.setValue(1200)
-        self.timer_slider.setFixedWidth(160)  # Slightly reduced width
         self.timer_display = QLabel("20 minutes")
         self.timer_display.setStyleSheet("border: none;")
-        self.timer_display.setMinimumWidth(80)
+        self.timer_display.setFixedWidth(80)  # Set fixed width for display label
         self.timer_slider.valueChanged.connect(self.update_timer_display)
         
         timer_layout.addWidget(timer_label)
@@ -476,18 +466,18 @@ class SpriteSelector(QDialog):
 
         # Posture timer slider
         posture_timer_layout = QHBoxLayout()
-        posture_timer_layout.setSpacing(4)  # Match the spacing from posture toggle layout
-        posture_timer_layout.setContentsMargins(0, 0, 0, 0)  # Remove all padding
+        posture_timer_layout.setSpacing(4)
+        posture_timer_layout.setContentsMargins(0, 0, 0, 0)
         posture_timer_label = QLabel("Reminder interval:")
         posture_timer_label.setStyleSheet("border: none;")
         self.posture_timer_slider = QSlider(Qt.Horizontal)
-        self.posture_timer_slider.setMinimum(5)
+        self.posture_timer_slider.setFixedWidth(150)  # Set fixed width for slider
+        self.posture_timer_slider.setMinimum(300)
         self.posture_timer_slider.setMaximum(3600)
         self.posture_timer_slider.setValue(1200)
-        self.posture_timer_slider.setFixedWidth(160)  # Slightly reduced width
         self.posture_timer_display = QLabel("20 minutes")
         self.posture_timer_display.setStyleSheet("border: none;")
-        self.posture_timer_display.setMinimumWidth(80)
+        self.posture_timer_display.setFixedWidth(80)  # Set fixed width for display label
         self.posture_timer_slider.valueChanged.connect(self.update_posture_timer_display)
         
         posture_timer_layout.addWidget(posture_timer_label)
@@ -527,31 +517,14 @@ class SpriteSelector(QDialog):
                 self.timer_display.setText(f"{minutes} min {seconds} sec")
     
     def select_sprite(self):
-        file_name, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select Sprite Image",
-            "",
-            "Image Files (*.png *.jpg *.jpeg *.gif *.bmp)"
-        )
-        
-        if file_name:
-            pixmap = QPixmap(file_name)
-            if not pixmap.isNull():
-                self.selected_sprite = pixmap
-                self.update_preview_size(self.sprite_size)
-                self.start_btn.setEnabled(True)
-            else:
-                QMessageBox.warning(self, "Error", "Invalid image file!")
-    
+        # This method can be removed since sprite selection is hardcoded
+        pass
+
     def update_preview_size(self, size):
-        if self.selected_sprite:
-            scaled_preview = self.selected_sprite.scaled(
-                size, size,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-            self.preview.setPixmap(scaled_preview)
-    
+        # This method can be removed since it's only called by select_sprite
+        # which is no longer used
+        pass
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.oldPos = event.globalPos()
@@ -569,52 +542,13 @@ class SpriteSelector(QDialog):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Simple background with rounded corners
-        painter.setBrush(QColor(255, 255, 255, 140))  # White with 140/255 alpha
-        painter.setPen(Qt.NoPen)  # No border
-        painter.drawRoundedRect(self.rect(), 20, 20)  # 20px corner radius
-
-    def enableBlur(self):
-        if sys.platform == 'win32':
-            from ctypes.wintypes import DWORD, BOOL, HRGN, HWND
-            
-            class ACCENTPOLICY(ctypes.Structure):
-                _fields_ = [
-                    ('AccentState', DWORD),
-                    ('AccentFlags', DWORD),
-                    ('GradientColor', DWORD),
-                    ('AnimationId', DWORD)
-                ]
-
-            class WINDOWCOMPOSITIONATTRIBDATA(ctypes.Structure):
-                _fields_ = [
-                    ('Attribute', DWORD),
-                    ('Data', ctypes.POINTER(ACCENTPOLICY)),
-                    ('SizeOfData', ctypes.c_size_t)
-                ]
-
-            user32 = ctypes.windll.user32
-            SetWindowCompositionAttribute = user32.SetWindowCompositionAttribute
-            SetWindowCompositionAttribute.restype = BOOL
-            SetWindowCompositionAttribute.argtypes = [HWND, WINDOWCOMPOSITIONATTRIBDATA]
-
-            accent = ACCENTPOLICY()
-            accent.AccentState = 3  # ACCENT_ENABLE_BLURBEHIND
-            accent.AccentFlags = 0
-            accent.GradientColor = 0
-            accent.AnimationId = 0
-
-            data = WINDOWCOMPOSITIONATTRIBDATA()
-            data.Attribute = 19  # WCA_ACCENT_POLICY
-            data.SizeOfData = ctypes.sizeof(accent)
-            data.Data = ctypes.pointer(accent)
-
-            hwnd = int(self.winId())
-            SetWindowCompositionAttribute(hwnd, data)
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.enableBlur()
+        # Draw the background with opacity and border
+        painter.setBrush(QColor(255, 255, 255, 245))  # White at 96% opacity (245/255)
+        pen = painter.pen()
+        pen.setWidth(1)  # Set border width to 1px
+        pen.setColor(QColor(0, 0, 0, 127))  # Semi-transparent black for the border
+        painter.setPen(pen)
+        painter.drawRoundedRect(self.rect(), 20, 20)
 
     def update_preview_animation(self):
         if self.current_frame is None or self.frame_time <= 0:
@@ -804,12 +738,15 @@ class DesktopPet(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     
-    # Show settings dialog
+    # Set application icon
+    app.setWindowIcon(QIcon('icon.ico'))
+    
     selector = SpriteSelector()
     selector.selected_sprite = QPixmap("goose.png")
     selector.start_btn.setEnabled(True)
     
-    # Find the select button in the content layout and hide it
+    # Since sprite selection is hardcoded, we can remove this loop
+    # and just hide the button directly if needed
     for child in selector.findChildren(QPushButton):
         if child.text() == 'Select Sprite Image':
             child.setVisible(False)
@@ -822,7 +759,6 @@ def main():
         Qt.SmoothTransformation
     ))
     
-    # Show the selector window instead of using exec_()
     selector.show()
     return app.exec_()
 
