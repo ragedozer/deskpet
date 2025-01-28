@@ -13,6 +13,14 @@ from itertools import cycle
 if sys.platform == 'win32':
     ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class ReminderWindow(QMainWindow):
     def __init__(self, reminder_type="Hydration"):
         super().__init__()
@@ -104,7 +112,7 @@ class SpriteAnimation:
     def __init__(self, sprite_sheet, animation_data):
         self.sprite_sheet = QPixmap(sprite_sheet)
         
-        with open(animation_data, 'r') as f:
+        with open(resource_path(animation_data), 'r') as f:
             self.data = json.load(f)
             
         self.frames = {}
@@ -283,7 +291,7 @@ class SpriteSelector(QDialog):
         """)
         
         # Add animation properties
-        self.animation = SpriteAnimation('goose.png', 'goose.json')
+        self.animation = SpriteAnimation(resource_path('goose.png'), resource_path('goose.json'))
         self.current_frame = None
         self.frame_time = 0
         
@@ -309,7 +317,7 @@ class SpriteSelector(QDialog):
         # Add logo with left alignment matching containers
         logo_label = QLabel()
         try:
-            logo_pixmap = QPixmap("logo.png")
+            logo_pixmap = QPixmap(resource_path("logo.png"))
             if not logo_pixmap.isNull():
                 scaled_logo = logo_pixmap.scaled(96, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 logo_label.setPixmap(scaled_logo)
@@ -605,7 +613,7 @@ class DesktopPet(QMainWindow):
         self.posture_reminder_window = ReminderWindow("Posture")
         
         # Load animations
-        self.animation = SpriteAnimation('goose.png', 'goose.json')
+        self.animation = SpriteAnimation(resource_path('goose.png'), resource_path('goose.json'))
         self.current_animation = 'idle-right'
         self.current_frame = None
         self.frame_time = 0
@@ -747,7 +755,7 @@ def main():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
     selector = SpriteSelector()
-    selector.selected_sprite = QPixmap("goose.png")
+    selector.selected_sprite = QPixmap(resource_path("goose.png"))
     selector.start_btn.setEnabled(True)
     
     for child in selector.findChildren(QPushButton):
