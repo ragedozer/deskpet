@@ -419,8 +419,10 @@ class SpriteSelector(QDialog):
         timer_label.setStyleSheet("border: none;")
         self.timer_slider = QSlider(Qt.Horizontal)
         self.timer_slider.setFixedWidth(150)  # Set fixed width for slider
-        self.timer_slider.setMinimum(300)
-        self.timer_slider.setMaximum(3600)
+        self.timer_slider.setMinimum(300)  # 5 minutes in seconds
+        self.timer_slider.setMaximum(3600)  # 60 minutes in seconds
+        self.timer_slider.setSingleStep(60)  # Step by 1 minute
+        self.timer_slider.setPageStep(300)  # Page step of 5 minutes
         self.timer_slider.setValue(1200)
         self.timer_display = QLabel("20 minutes")
         self.timer_display.setStyleSheet("border: none;")
@@ -480,8 +482,10 @@ class SpriteSelector(QDialog):
         posture_timer_label.setStyleSheet("border: none;")
         self.posture_timer_slider = QSlider(Qt.Horizontal)
         self.posture_timer_slider.setFixedWidth(150)  # Set fixed width for slider
-        self.posture_timer_slider.setMinimum(300)
-        self.posture_timer_slider.setMaximum(3600)
+        self.posture_timer_slider.setMinimum(300)  # 5 minutes in seconds
+        self.posture_timer_slider.setMaximum(3600)  # 60 minutes in seconds
+        self.posture_timer_slider.setSingleStep(60)  # Step by 1 minute
+        self.posture_timer_slider.setPageStep(300)  # Page step of 5 minutes
         self.posture_timer_slider.setValue(1200)
         self.posture_timer_display = QLabel("20 minutes")
         self.posture_timer_display.setStyleSheet("border: none;")
@@ -514,15 +518,8 @@ class SpriteSelector(QDialog):
         self.oldPos = None
     
     def update_timer_display(self, value):
-        if value < 60:
-            self.timer_display.setText(f"{value} seconds")
-        else:
-            minutes = value // 60
-            seconds = value % 60
-            if seconds == 0:
-                self.timer_display.setText(f"{minutes} minutes")
-            else:
-                self.timer_display.setText(f"{minutes} min {seconds} sec")
+        minutes = value // 60
+        self.timer_display.setText(f"{minutes} minutes")
     
     def select_sprite(self):
         # This method can be removed since sprite selection is hardcoded
@@ -589,15 +586,8 @@ class SpriteSelector(QDialog):
             self.start_btn.setText("Start deskpet")
 
     def update_posture_timer_display(self, value):
-        if value < 60:
-            self.posture_timer_display.setText(f"{value} seconds")
-        else:
-            minutes = value // 60
-            seconds = value % 60
-            if seconds == 0:
-                self.posture_timer_display.setText(f"{minutes} minutes")
-            else:
-                self.posture_timer_display.setText(f"{minutes} min {seconds} sec")
+        minutes = value // 60
+        self.posture_timer_display.setText(f"{minutes} minutes")
 
 class DesktopPet(QMainWindow):
     def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300, posture_enabled=False, posture_interval=300):
