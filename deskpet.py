@@ -498,6 +498,69 @@ class SpriteSelector(QDialog):
         posture_container_layout.addLayout(posture_timer_layout)
 
         content_layout.addWidget(posture_container, 0, Qt.AlignCenter)
+        content_layout.addSpacing(12)  # Reduced spacing between containers
+
+        # Container for reality check settings
+        reality_container = QWidget()
+        reality_container.setFixedWidth(360)
+        reality_container.setStyleSheet("""
+            QWidget {
+                border: 0.5px solid rgba(0, 0, 0, 0.65);
+                border-radius: 16px;
+                padding: 6px;
+            }
+            QLabel {
+                border: none;
+            }
+            QSlider {
+                border: none;
+            }
+        """)
+        reality_container_layout = QVBoxLayout(reality_container)
+        reality_container_layout.setContentsMargins(6, 12, 6, 0)  # Removed bottom padding
+        reality_container_layout.setSpacing(2)  # Minimal spacing between toggle and interval
+
+        # Reality check toggle
+        reality_layout = QHBoxLayout()
+        reality_layout.setSpacing(4)
+        reality_label = QLabel("Reality check")
+        reality_label.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-size: 12px;
+                border: none;
+            }
+        """)
+        self.reality_checkbox = ToggleSwitch()
+        reality_layout.addWidget(reality_label)
+        reality_layout.addWidget(self.reality_checkbox)
+        reality_layout.addStretch()
+        reality_container_layout.addLayout(reality_layout)
+
+        # Reality check timer slider
+        reality_timer_layout = QHBoxLayout()
+        reality_timer_layout.setSpacing(4)
+        reality_timer_layout.setContentsMargins(0, 0, 0, 0)
+        reality_timer_label = QLabel("Reminder interval:")
+        reality_timer_label.setStyleSheet("border: none;")
+        self.reality_timer_slider = QSlider(Qt.Horizontal)
+        self.reality_timer_slider.setFixedWidth(150)  # Set fixed width for slider
+        self.reality_timer_slider.setMinimum(300)  # 5 minutes in seconds
+        self.reality_timer_slider.setMaximum(3600)  # 60 minutes in seconds
+        self.reality_timer_slider.setSingleStep(60)  # Step by 1 minute
+        self.reality_timer_slider.setPageStep(300)  # Page step of 5 minutes
+        self.reality_timer_slider.setValue(1200)
+        self.reality_timer_display = QLabel("20 minutes")
+        self.reality_timer_display.setStyleSheet("border: none;")
+        self.reality_timer_display.setFixedWidth(80)  # Set fixed width for display label
+        self.reality_timer_slider.valueChanged.connect(self.update_reality_timer_display)
+
+        reality_timer_layout.addWidget(reality_timer_label)
+        reality_timer_layout.addWidget(self.reality_timer_slider)
+        reality_timer_layout.addWidget(self.reality_timer_display)
+        reality_container_layout.addLayout(reality_timer_layout)
+
+        content_layout.addWidget(reality_container, 0, Qt.AlignCenter)
         content_layout.addSpacing(20)
 
         # Center the start button
@@ -576,7 +639,9 @@ class SpriteSelector(QDialog):
                 self.hydration_checkbox.isChecked(),
                 self.timer_slider.value(),
                 self.posture_checkbox.isChecked(),
-                self.posture_timer_slider.value()
+                self.posture_timer_slider.value(),
+                self.reality_checkbox.isChecked(),
+                self.reality_timer_slider.value()
             )
             self.start_btn.setText("Stop deskpet")
         else:
@@ -589,8 +654,12 @@ class SpriteSelector(QDialog):
         minutes = value // 60
         self.posture_timer_display.setText(f"{minutes} minutes")
 
+    def update_reality_timer_display(self, value):
+        minutes = value // 60
+        self.reality_timer_display.setText(f"{minutes} minutes")
+
 class DesktopPet(QMainWindow):
-    def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300, posture_enabled=False, posture_interval=300):
+    def __init__(self, sprite_size, max_travel, hydration_enabled=False, hydration_interval=300, posture_enabled=False, posture_interval=300, reality_enabled=False, reality_interval=300):
         super().__init__()
         self.sprite_size = sprite_size
         self.max_travel = max_travel
@@ -598,9 +667,12 @@ class DesktopPet(QMainWindow):
         self.hydration_interval = hydration_interval
         self.posture_enabled = posture_enabled
         self.posture_interval = posture_interval
+        self.reality_enabled = reality_enabled
+        self.reality_interval = reality_interval
         self.start_x = None
         self.reminder_window = ReminderWindow()
         self.posture_reminder_window = ReminderWindow("Posture")
+        self.reality_reminder_window = ReminderWindow("Reality")
         
         # Load animations
         self.animation = SpriteAnimation(resource_path('goose.png'), resource_path('goose.json'))
@@ -646,7 +718,12 @@ class DesktopPet(QMainWindow):
             self.posture_timer = QTimer(self)
             self.posture_timer.timeout.connect(self.posture_check)
             self.posture_timer.start(self.posture_interval * 1000)
-        
+
+        if self.reality_enabled:
+            self.reality_timer = QTimer(self)
+            self.reality_timer.timeout.connect(self.reality_check)
+            self.reality_timer.start(self.reality_interval * 1000)
+
         self.setGeometry(self.x, self.y, self.sprite_size, self.sprite_size)
         self.show()
         
@@ -662,7 +739,12 @@ class DesktopPet(QMainWindow):
         self.posture_reminder_window.show()
         self.posture_reminder_window.raise_()
         self.posture_reminder_window.activateWindow()
-    
+
+    def reality_check(self):
+        self.reality_reminder_window.show()
+        self.reality_reminder_window.raise_()
+        self.reality_reminder_window.activateWindow()
+
     def update_animation(self):
         if self.current_frame is None or self.frame_time <= 0:
             self.current_frame, duration = next(self.animation.frame_cycles[self.current_animation])
