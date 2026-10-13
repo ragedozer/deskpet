@@ -2,7 +2,7 @@
 
 Start your pet, drage it around on your desktop, and watch it wander around.  
 It will keep you company throughout your day.  
-Optionally, enable hydration and posture check reminders.
+Optionally, enable hydration, posture check and reality check reminders.
 
 exe is available in dist folder.
 
